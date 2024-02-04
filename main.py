@@ -26,7 +26,7 @@ def list_cubes_with_dimensions(tm1: TM1Service) -> List[str]:
         result[cube.name] = cube.dimensions
     return result
     
-def filter_dimension_element(tm1: TM1Service, dimension_name: str, layer_filter: List[int]) -> List[str]:
+def filter_dimension_element(tm1: TM1Service, dimension_name: str, layer_filter: List[int]=None, conditions: dict=None) -> List[str]:
     # this is for the multiple languages result mappnig
     df = tm1.elements.get_elements_dataframe(dimension_name=dimension_name, hierarchy_name=dimension_name, skip_consolidations=False)
     
@@ -34,19 +34,27 @@ def filter_dimension_element(tm1: TM1Service, dimension_name: str, layer_filter:
     # mdx filter layer
     if not layer_filter:
         mdx = f'''
-        {{
             [{dimension_name}].[{dimension_name}].Members
-        }}  
         '''
     else:
         mdx = f'''
-        {{
         TM1FILTERBYLEVEL({{
             [{dimension_name}].[{dimension_name}].Members
         }}, {",".join([str(n) for n in layer_filter])})
-        }}  
         '''
+    
+    # add filter
+    # # conditions = {'Time_Turkish': '2003', 'Time_Spanish': 'er'}
+    # conditions = {'Time_Turkish': '2003', 'Time_Spanish': 'er'}
+    if not conditions:
+        conditions = {}
+    def add_condition(key, value, mdx) -> str:
+        return f"TM1FILTERBYPATTERN( {mdx}, '*{value}*', '{key}' )"
 
+    for key, value in conditions.items():
+        mdx = add_condition(key, value, mdx)
+    
+    mdx = '{' + mdx + '}'
     mdx_result = tm1.elements.execute_set_mdx(mdx=mdx)
     print("mdx_result")
     print(mdx_result)
@@ -94,7 +102,7 @@ with TM1Service(address=address, port=port, user=user, password=password, ssl=Tr
     # d1 = tm1.dimensions.get(dimension_name='plan_lines')
     # print(d1)   # The names contains all the element names
 
-    element_names = filter_dimension_element(tm1, dimension_name='plan_chart_of_accounts', layer_filter=[3])
+    element_names = filter_dimension_element(tm1, dimension_name='plan_currency', layer_filter=[1,0], conditions={'CurrencyName_ChineseTraditional':'元', 'CurrencyName_Turkish':'B'})
     print(element_names)
     print(len(element_names))
     
