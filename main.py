@@ -1,5 +1,5 @@
 from TM1py.Services import TM1Service
-from typing import List
+from typing import List, Tuple
 
 from TM1py import Element, ElementAttribute, Dimension
 import pandas as pd
@@ -26,7 +26,7 @@ def list_cubes_with_dimensions(tm1: TM1Service) -> List[str]:
         result[cube.name] = cube.dimensions
     return result
     
-def filter_dimension_element(tm1: TM1Service, dimension_name: str, layer_filter: List[int]=None, conditions: dict=None) -> List[str]:
+def filter_dimension_element(tm1: TM1Service, dimension_name: str, layer_filter: List[int]=None, conditions: List[Tuple[str, str, str]]=None) -> List[str]:
     # this is for the multiple languages result mappnig
     df = tm1.elements.get_elements_dataframe(dimension_name=dimension_name, hierarchy_name=dimension_name, skip_consolidations=False)
     
@@ -44,15 +44,21 @@ def filter_dimension_element(tm1: TM1Service, dimension_name: str, layer_filter:
         '''
     
     # add filter
-    # # conditions = {'Time_Turkish': '2003', 'Time_Spanish': 'er'}
-    # conditions = {'Time_Turkish': '2003', 'Time_Spanish': 'er'}
+    
     if not conditions:
-        conditions = {}
-    def add_condition(key, value, mdx) -> str:
-        return f"TM1FILTERBYPATTERN( {mdx}, '*{value}*', '{key}' )"
-
-    for key, value in conditions.items():
-        mdx = add_condition(key, value, mdx)
+        conditions = []
+    def add_condition(key, value, wildcard_location,mdx) -> str:
+        # if key == '', means filter by the element name itself
+        if wildcard_location == 'contains':
+            return f"TM1FILTERBYPATTERN( {mdx}, '*{value}*', '{key}' )"
+        elif wildcard_location == 'startswith':
+            return f"TM1FILTERBYPATTERN( {mdx}, '{value}*', '{key}' )"
+        elif wildcard_location == 'endwith':
+            return f"TM1FILTERBYPATTERN( {mdx}, '*{value}', '{key}' )"
+        elif wildcard_location == 'exactly':
+            return f"TM1FILTERBYPATTERN( {mdx}, '{value}', '{key}' )"
+    for key, value, wildcard_location in conditions:
+        mdx = add_condition(key, value, wildcard_location, mdx)
     
     mdx = '{' + mdx + '}'
     mdx_result = tm1.elements.execute_set_mdx(mdx=mdx)
@@ -101,8 +107,12 @@ with TM1Service(address=address, port=port, user=user, password=password, ssl=Tr
     # consolidates types have the hierarchical with edges and weights, indicated parent <-> component
     # d1 = tm1.dimensions.get(dimension_name='plan_lines')
     # print(d1)   # The names contains all the element names
-
-    element_names = filter_dimension_element(tm1, dimension_name='plan_currency', layer_filter=[1,0], conditions={'CurrencyName_ChineseTraditional':'元', 'CurrencyName_Turkish':'B'})
+    
+    
+    conditions = [
+        ['Time_Spanish','er','contains']
+    ]
+    element_names = filter_dimension_element(tm1, dimension_name='plan_time', layer_filter=[], conditions=conditions)
     print(element_names)
     print(len(element_names))
     
