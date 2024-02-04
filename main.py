@@ -26,7 +26,34 @@ def list_cubes_with_dimensions(tm1: TM1Service) -> List[str]:
         result[cube.name] = cube.dimensions
     return result
     
-# def process_dimensions(dimension: ):
+def filter_dimension_element(tm1: TM1Service, dimension_name: str, layer_filter: List[int]) -> List[str]:
+    # this is for the multiple languages result mappnig
+    df = tm1.elements.get_elements_dataframe(dimension_name=dimension_name, hierarchy_name=dimension_name, skip_consolidations=False)
+    
+    
+    # mdx filter layer
+    if not layer_filter:
+        mdx = f'''
+        {{
+            [{dimension_name}].[{dimension_name}].Members
+        }}  
+        '''
+    else:
+        mdx = f'''
+        {{
+        TM1FILTERBYLEVEL({{
+            [{dimension_name}].[{dimension_name}].Members
+        }}, {",".join([str(n) for n in layer_filter])})
+        }}  
+        '''
+
+    mdx_result = tm1.elements.execute_set_mdx(mdx=mdx)
+    print("mdx_result")
+    print(mdx_result)
+    element_names = [element[0]['Name'] for element in mdx_result]
+    return element_names
+
+
 
 def get_df_of_the_view(tm1: TM1Service, cube_name: str, view_name: str, output_file_format: str) -> pd.DataFrame:
     
@@ -56,17 +83,20 @@ with TM1Service(address=address, port=port, user=user, password=password, ssl=Tr
     # query1 = list_cubes_with_dimensions(tm1)
     # print(query1)
 
-    cube_name = "plan_BudgetPlan"
-    view_name = "Dy Slice To 2004 Exec Report"
-    get_df_of_the_view(tm1, cube_name, view_name, output_file_format="")
+    # cube_name = "plan_BudgetPlan"
+    # view_name = "Dy Slice To 2004 Exec Report"
+    # get_df_of_the_view(tm1, cube_name, view_name, output_file_format="")
     
     
     # question 2
     # Elements have differnet types: numeric, string, consolidated, etc
     # consolidates types have the hierarchical with edges and weights, indicated parent <-> component
-    # d1 = tm1.dimensions.get(dimension_name='plan_time')
+    # d1 = tm1.dimensions.get(dimension_name='plan_lines')
     # print(d1)   # The names contains all the element names
-    
+
+    element_names = filter_dimension_element(tm1, dimension_name='plan_chart_of_accounts', layer_filter=[3])
+    print(element_names)
+    print(len(element_names))
     
     
 
@@ -78,7 +108,7 @@ with TM1Service(address=address, port=port, user=user, password=password, ssl=Tr
     # e1 = tm1.elements.get(dimension_name='plan_business_unit', hierarchy_name='plan_business_unit', element_name='유럽')
     # print(e1) 
 
-    # attributes = tm1.elements.get_element_attributes(dimension_name='plan_business_unit', hierarchy_name='plan_business_unit')
+    # attributes = tm1.elements.get_element_attributes(dimension_name='plan_lines', hierarchy_name='plan_lines')
     # print(attributes)
     # for a in attributes:
     #     print(f"a: {a}")
