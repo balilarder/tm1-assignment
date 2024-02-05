@@ -8,6 +8,8 @@ pandas = "*"
 tm1py = "*"
 openpyxl = "*"
 pyarrow = "*"
+fastapi = "*"
+uvicorn = "*"
 
 [dev-packages]
 pylint = "*"
