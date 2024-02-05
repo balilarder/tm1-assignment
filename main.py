@@ -80,9 +80,14 @@ def get_df_of_the_view(tm1: TM1Service, cube_name: str, view_name: str, output_f
     nv = tm1.views.get_native_view(cube_name=cube_name, view_name=view_name)
     print(nv.MDX)
     result = tm1.cubes.cells.execute_mdx_dataframe(nv.MDX)
-    result.to_csv('result_csv.csv', encoding='utf-8')
-    result.to_excel('result_excel.xlsx')
-    result.to_feather('result.feather')
+    if output_file_format == 'csv':
+        result.to_csv(f"{cube_name}-{view_name}.csv", encoding='utf-8')
+    elif output_file_format == 'xlsx':
+        result.to_excel(f"{cube_name}-{view_name}.xlsx")
+    elif output_file_format == 'feather':
+        result.to_feather(f"{cube_name}-{view_name}.feather")
+
+    return result
 
 
 with TM1Service(address=address, port=port, user=user, password=password, ssl=True) as tm1:
