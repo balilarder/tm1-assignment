@@ -6,6 +6,7 @@ app = FastAPI()
 from TM1py.Services import TM1Service
 from typing import List, Tuple, Optional
 import pandas as pd
+import pyarrow.feather as feather
 
 from main import address, port, user, password
 from main import list_dimensions, list_cubes_with_dimensions
@@ -75,4 +76,22 @@ async def get_download_file(cube_name: str, view_name: str, output_file_format: 
                 iter([excel_buffer.getvalue()]), headers=headers
             )
             return response
+        
+        elif output_file_format == 'feather':
+            # Save the DataFrame to a Feather file in memory
+            feather_buffer = io.BytesIO()
+            feather.write_feather(df, feather_buffer)
+            feather_buffer.seek(0)
+
+            # Set the response headers for Feather file
+            headers = {
+                "Content-Disposition": "attachment; filename=export.feather",
+                "Content-Type": "application/octet-stream",  
+            }
+
+            response = StreamingResponse(
+                iter([feather_buffer.getvalue()]), headers=headers
+            )
+            return response
+
 
